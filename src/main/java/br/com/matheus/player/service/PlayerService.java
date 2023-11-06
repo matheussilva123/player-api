@@ -2,20 +2,24 @@ package br.com.matheus.player.service;
 
 import br.com.matheus.player.dto.AlbumDTO;
 import br.com.matheus.player.dto.ArchiveDTO;
-import br.com.matheus.player.exception.FileConverterException;
-import br.com.matheus.player.exception.ObjectNotFoundException;
 import br.com.matheus.player.repository.S3Repository;
 import br.com.matheus.player.utils.JsonConverter;
 import com.amazonaws.util.StringInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.sax.BodyContentHandler;
+import org.apache.tika.parser.mp3.Mp3Parser;
+import org.xml.sax.ContentHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
 
 @Service
 public class PlayerService {
@@ -34,41 +38,8 @@ public class PlayerService {
         this.jsonConverter = jsonConverter;
     }
 
-    public void uploadFiles(final MultipartFile multipartFile, final String path) {
-        if (checkIsNull(path)) {
-            throw new IllegalArgumentException("Folder cannot be null, empty or blank.");
-        }
-        if(multipartFile.isEmpty()){
-            throw new IllegalArgumentException("File cannot be empty or null");
-        }
-
-        final File file = convertMultipartFileToFile(multipartFile);
-        s3Repository.uploadFile(file, path);
-        file.delete();
-    }
-
-    public void uploadMultiFiles(final List<MultipartFile> multipartFile, final String path) {
-        if(multipartFile.isEmpty()) {
-            throw new IllegalArgumentException("Path cannot be null, empty or blank.");
-        }
-        multipartFile.forEach(file -> uploadFiles(file, path));
-    }
-
-    public List<String> listAllPaths() {
-        return s3Repository.listAllPaths();
-    }
-
-    public List<String> listFilesByPath(final String path) {
-        if (checkIsNull(path)) {
-            throw new IllegalArgumentException("Folder cannot be null, empty or blank.");
-        }
-
-        final List<String> filesList = s3Repository.getSubFoldersByFolder(path);
-
-        if(filesList.isEmpty()) {
-            throw new ObjectNotFoundException(String.format("%s not found.", path));
-        }
-        return filesList;
+    public List<String> getAllFolders() {
+        return s3Repository.getAllFolders();
     }
 
     public void put(final MultipartFile multipartFile, final String folder) {
@@ -85,15 +56,11 @@ public class PlayerService {
         }
     }
 
-    private List<String> getSubFoldersByFolder(final String folder) {
-        return s3Repository.getSubFoldersByFolder(folder);
-    }
-
     public AlbumDTO getAlbumBy(final String folder) {
         if (checkIsNull(folder)) {
             throw new IllegalArgumentException("Folder cannot be null, empty or blank.");
         }
-        final List<ArchiveDTO> archives = getContentByFolder(folder);
+        final List<ArchiveDTO> archives = getArchivesByFolder(folder);
         final List<String> subFolders = getSubFoldersByFolder(folder);
         return new AlbumDTO(subFolders, folder, archives);
     }
@@ -103,13 +70,9 @@ public class PlayerService {
         s3Repository.put(inputStream, pathFile, contentType);
     }
 
-    public List<ArchiveDTO> getContentByFolder(final String folder) {
-        return s3Repository.get(buildContentFile(folder), ArchiveDTO.class);
-    }
-
-    public void putFileContent(final ArchiveDTO archive, final String folder) {
+    private void putFileContent(final ArchiveDTO archive, final String folder) {
         try {
-            final List<ArchiveDTO> archives = getContentByFolder(folder);
+            final List<ArchiveDTO> archives = getArchivesByFolder(folder);
             if(archives.isEmpty()){
                 s3Repository.put(convertToStringInputStream(Collections.singletonList(archive)),
                     buildContentFile(folder),
@@ -124,7 +87,6 @@ public class PlayerService {
             throw new RuntimeException(e);
         }
     }
-
 
     private StringInputStream convertToStringInputStream(final List<ArchiveDTO> archiveDTOS) {
         try {
@@ -152,25 +114,35 @@ public class PlayerService {
         final String pathFile = buildPathArchive(folder, fileName);
         final String url = s3Repository.getUrl(pathFile);
         final String type = multipartFile.getContentType();
-
-        return new ArchiveDTO(fileName, url, type, 0l);
+        final double duration = getDuration(multipartFile);
+        return new ArchiveDTO(fileName, url, type, duration);
        }
-
-    private File convertMultipartFileToFile(final MultipartFile multipartFile) {
-        File file = new File(Objects.requireNonNull(multipartFile.getOriginalFilename()));
-        try {
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
-            fileOutputStream.write(multipartFile.getBytes());
-            fileOutputStream.close();
-        } catch (final IOException e) {
-            throw new FileConverterException(String.format("Failed to convert MultipartFile to file. Exception: %s",
-                    e.getMessage()));
-        }
-        return file;
-    }
 
     private boolean checkIsNull(final String string) {
         return string == null || string.isEmpty() || string.isBlank();
     }
 
+    private List<String> getSubFoldersByFolder(final String folder) {
+        return s3Repository.getSubFoldersByFolder(folder);
+    }
+
+    private List<ArchiveDTO> getArchivesByFolder(final String folder) {
+        return s3Repository.get(buildContentFile(folder), ArchiveDTO.class);
+    }
+
+    private double getDuration(final MultipartFile multipartFile) {
+        try {
+            final ContentHandler handler = new BodyContentHandler();
+            final Metadata metadata = new Metadata();
+            final ParseContext parseCtx = new ParseContext();
+            final InputStream input = new ByteArrayInputStream(multipartFile.getBytes());
+            final Mp3Parser parser = new Mp3Parser();
+            parser.parse(input, handler, metadata, parseCtx);
+
+            return Double.parseDouble(metadata.get("xmpDM:duration"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0.0;
+        }
+    }
 }

@@ -8,18 +8,18 @@ public class ArchiveDTO {
     private final String title;
     private final String url;
     private final String type;
-    private final double duration;
+    private final double durationInSeconds;
 
     @JsonCreator
     public ArchiveDTO(
         @JsonProperty(value = "title") final String title,
         @JsonProperty(value = "url") final String url,
         @JsonProperty(value = "type") final String type,
-        @JsonProperty(value = "duration") final double duration) {
+        @JsonProperty(value = "durationInSeconds") final double durationInSeconds) {
         this.title = title;
         this.url = url;
         this.type = type;
-        this.duration = duration;
+        this.durationInSeconds = durationInSeconds;
     }
 
     public String getTitle() {
@@ -35,8 +35,8 @@ public class ArchiveDTO {
         return type;
     }
 
-    public double getDuration() {
-        return duration;
+    public double getDurationInSeconds() {
+        return durationInSeconds;
     }
 
 }

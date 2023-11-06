@@ -5,14 +5,21 @@ import br.com.matheus.player.exception.FileUploadException;
 import br.com.matheus.player.utils.JsonConverter;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
-import java.io.File;
 import java.io.InputStream;
-import java.util.*;
 
 @Repository
 public class S3Repository {
@@ -30,14 +37,6 @@ public class S3Repository {
         this.amazonS3 = amazonS3;
     }
 
-    public void uploadFile(final File file, final String path) {
-        try {
-            amazonS3.putObject(bucketName, String.format("/%s/%s", path, file.getName()), file);
-        } catch (final SdkClientException e) {
-            throw new FileUploadException(String.format("Failed to upload file. Exception: %s", e.getMessage()));
-        }
-    }
-
     public <T> List<T> get(final String path, final Class<? extends T> targetClass) {
         return get(bucketName, path, targetClass);
     }
@@ -50,10 +49,6 @@ public class S3Repository {
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public String getString(final String path) {
-        return getString(bucketName, path);
     }
 
     public String getString(final String bucketName, final String path) {
@@ -81,17 +76,17 @@ public class S3Repository {
         }
     }
 
-    public List<String> listAllPaths() {
+    public List<String> getAllFolders() {
         final ListObjectsRequest listObjectsRequest = new ListObjectsRequest()
                 .withBucketName(bucketName)
-                .withPrefix("/")
+                .withPrefix("music/")
                 .withDelimiter("/");
 
         final ObjectListing objects = amazonS3.listObjects(listObjectsRequest);
 
         final List<String> listPaths = Objects.requireNonNull(objects.getCommonPrefixes());
 
-        return listPaths.stream().map(x -> x.replace("/", "")).toList();
+        return extractToFoldersString(listPaths);
     }
 
     public List<String> getSubFoldersByFolder(final String folder) {
@@ -108,48 +103,10 @@ public class S3Repository {
         }
     }
 
-
-    // Pegar /content/algum_folder/isso
-    public List<String> getLists(final String prefix) {
-        try {
-            final List<String> filesListByPath = new ArrayList<>();
-
-            final ListObjectsRequest listObjects = new ListObjectsRequest()
-                    .withPrefix(prefix)
-                    .withBucketName(bucketName);
-
-            final List<S3ObjectSummary> filesList = amazonS3.listObjects(listObjects).getObjectSummaries();
-
-            for (S3ObjectSummary value : filesList) {
-                filesListByPath.add(value.getKey());
-            }
-
-            return filesListByPath;
-        } catch (final Exception e) {
-            throw new FileConverterException(String.format("Failed to search files, error: %s", e.getMessage()));
-        }
-    }
-
     public String getUrl(final String path){
         return amazonS3.getUrl(bucketName, path).toString();
     }
 
-    public void uploadFileProper(final String path, final InputStream input,
-                                 final ObjectMetadata metadata) {
-        try {
-            amazonS3.putObject(bucketName, path, input, metadata);
-        } catch (final Exception e) {
-            throw new FileUploadException(String.format("Failed to upload file. Exception: %s", e.getMessage()));
-        }
-    }
-
-    private String getPathWithFileName(final String path, final String fileName) {
-        return String.format("/%s/%s", path, fileName);
-    }
-
-    private boolean isEmpty(final String string) {
-        return string == null || string.isEmpty() || string.isBlank();
-    }
 
     private List<String> extractToSubFoldersString(final List<String> folders) {
         List<String> newSubFolders = new ArrayList<>();
@@ -162,6 +119,12 @@ public class S3Repository {
             newSubFolders.add(newFolder);
         }
         return newSubFolders;
+    }
+
+    private List<String> extractToFoldersString(final List<String> folders) {
+        return folders.stream()
+            .map(s -> s.substring(s.indexOf('/') + 1, s.lastIndexOf('/')))
+            .toList();
     }
 
 }

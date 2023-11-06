@@ -25,17 +25,6 @@ public class JsonConverter {
         }
     }
 
-    public <T> T toObject(final String json, final Class<? extends T> clazz) {
-        try {
-            if (json.isBlank() || json.isEmpty()) {
-                return null;
-            }
-            return (T) objectMapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public <T> List<T> toList(final String json, final Class<? extends T> clazz) {
         try {
             if (json == null || json.isBlank() || json.isEmpty() || json.contains("[]")) {
