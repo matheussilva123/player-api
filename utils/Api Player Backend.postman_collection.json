@@ -1,0 +1,96 @@
+{
+	"info": {
+		"_postman_id": "21ae325d-ef7d-4d5c-8a21-b53e44fc2259",
+		"name": "Api Player Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "10221409"
+	},
+	"item": [
+		{
+			"name": "Get all folders",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{$player-url}}/api/files/folders",
+					"protocol": "https",
+					"host": [
+						"{{$player-url}}"
+					],
+					"path": [
+						"api",
+						"files",
+						"folders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get album by folder",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"folder\": \"guitarra\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{$player-url}}/api/files",
+					"protocol": "https",
+					"host": [
+						"{{$player-url}}"
+					],
+					"path": [
+						"api",
+						"files"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Upload music",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						},
+						{
+							"key": "path",
+							"value": "piano",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://{{$player-url}}/api/files/uploads",
+					"protocol": "https",
+					"host": [
+						"{{$player-url}}"
+					],
+					"path": [
+						"api",
+						"files",
+						"uploads"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
