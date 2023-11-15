@@ -10,7 +10,13 @@
 			"name": "Get all folders",
 			"request": {
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "...",
+						"type": "text"
+					}
+				],
 				"url": {
 					"raw": "https://{{$player-url}}/api/files/folders",
 					"protocol": "https",
@@ -21,6 +27,13 @@
 						"api",
 						"files",
 						"folders"
+					],
+					"query": [
+						{
+							"key": "",
+							"value": "",
+							"disabled": true
+						}
 					]
 				}
 			},
@@ -33,7 +46,13 @@
 			},
 			"request": {
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "...",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n    \"folder\": \"guitarra\"\n}",
@@ -61,7 +80,13 @@
 			"name": "Upload music",
 			"request": {
 				"method": "POST",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-ket",
+						"value": "...",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "formdata",
 					"formdata": [
@@ -91,6 +116,12 @@
 				}
 			},
 			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "$player-url",
+			"value": "https://player-12f96d3eb8da.herokuapp.com/"
 		}
 	]
 }
