@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
@@ -26,15 +25,16 @@ public class S3Repository {
 
     private static final String CONTENT_FILE_PATH = "content";
 
-    @Value("${s3.bucket}")
+    @Value("${aws.s3.bucket}")
     private String bucketName;
 
     private final AmazonS3 amazonS3;
-    @Autowired
-    private JsonConverter jsonConverter;
 
-    public S3Repository(final AmazonS3 amazonS3) {
+    private final JsonConverter jsonConverter;
+
+    public S3Repository(final AmazonS3 amazonS3, final JsonConverter jsonConverter) {
         this.amazonS3 = amazonS3;
+        this.jsonConverter = jsonConverter;
     }
 
     public <T> List<T> get(final String path, final Class<? extends T> targetClass) {
@@ -46,7 +46,7 @@ public class S3Repository {
             final String archiveString = getString(bucketName, path);
 
             return jsonConverter.toList(archiveString, targetClass);
-        } catch (final Exception e) {
+        } catch (final AmazonS3Exception e) {
             throw new RuntimeException(e);
         }
     }
